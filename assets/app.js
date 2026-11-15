@@ -491,6 +491,24 @@ function initMap() {
   });
   dark.addTo(map);
   state.tiles = { dark, satellite, light, terrain };
+  state.basemap = 'dark';
+  state.tileStats = {};
+  const wireTiles = (name, layer) => {
+    const s = { ok: 0, err: 0 };
+    state.tileStats[name] = s;
+    layer.on('tileload', () => { s.ok += 1; });
+    layer.on('tileerror', () => {
+      s.err += 1;
+      if (state.basemap === name) maybeFallbackBasemap(name, s);
+    });
+  };
+  Object.entries(state.tiles).forEach(([name, layer]) => wireTiles(name, layer));
+  setTimeout(() => {
+    const s = state.tileStats[state.basemap];
+    if (s && s.ok === 0 && s.err > 0) {
+      toast('Mapa sin teselas', 'No se reciben teselas. Cambia la capa base o revisa tu conexión.', 'warn');
+    }
+  }, 9000);
   state.map = map;
   state.canvasRenderer = L.canvas({ padding: 0.4 });
   state.planeLayer = L.layerGroup().addTo(map);
@@ -549,7 +567,23 @@ function setBasemap(name) {
   Object.values(state.tiles).forEach((layer) => state.map.removeLayer(layer));
   state.tiles[name].addTo(state.map);
   state.tiles[name].bringToBack();
+  state.basemap = name;
+  const s = state.tileStats && state.tileStats[name];
+  if (s) { s.err = 0; s.ok = 0; }
   $$('#layerGrid .layerchip').forEach((b) => b.classList.toggle('is-active', b.dataset.basemap === name));
+}
+
+let lastTileFallback = 0;
+function maybeFallbackBasemap(name, s) {
+  const now = Date.now();
+  if (now - lastTileFallback < 15000) return;
+  if (s.err < 8 || s.ok > s.err) return;
+  const order = ['dark', 'light', 'terrain', 'satellite'];
+  const next = order[(order.indexOf(name) + 1) % order.length];
+  if (next === name) return;
+  lastTileFallback = now;
+  setBasemap(next);
+  toast('Cambiando de capa base', `Las teselas de “${name}” no cargan; ahora se usa “${next}”.`, 'warn');
 }
 
 function renderAirportMarkers() {
