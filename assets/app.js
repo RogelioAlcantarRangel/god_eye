@@ -633,6 +633,22 @@ function altitudeBand(alt) {
   if (alt < 40000) return 'ALTO';
   return 'MUY ALTO';
 }
+
+function renderLegend() {
+  const el = $('#mapLegend');
+  if (!el) return;
+  const u = unitSet();
+  const t = (ft) => fmtInt(ft * u.altK);
+  const bands = [
+    ['#64748b', 'En tierra'],
+    ['#38bdf8', `0 – ${t(10000)} ${u.alt}`],
+    ['#34d399', `${t(10000)} – ${t(20000)}`],
+    ['#fbbf24', `${t(20000)} – ${t(33000)}`],
+    ['#fb923c', `${t(33000)} – ${t(40000)}`],
+    ['#c084fc', `+${t(40000)} ${u.alt}`]
+  ];
+  el.innerHTML = '<div class="legend-title">ALTITUD</div>' + bands.map(([c, l]) => `<div class="legend-row"><i style="background:${c};color:${c}"></i><span>${l}</span></div>`).join('');
+}
 function planeIcon(p, selected) {
   const color = p.emergency ? '#f87171' : altitudeColor(p.alt);
   const label = p.flight;
@@ -755,8 +771,8 @@ function updateStats() {
   const fastest = airborne.reduce((m, p) => Math.max(m, p.gs), 0);
   $('#statAirborne').textContent = state.source === 'connecting' ? '—' : fmtInt(airborne.length);
   $('#statGround').textContent = state.source === 'connecting' ? '—' : fmtInt(ground.length);
-  $('#statCeiling').textContent = state.source === 'connecting' ? '—' : `${fmtInt(ceiling / 1000)}k`;
-  $('#statFastest').textContent = state.source === 'connecting' ? '—' : `${fmtInt(fastest)} kt`;
+  $('#statCeiling').textContent = state.source === 'connecting' ? '—' : tAlt(ceiling);
+  $('#statFastest').textContent = state.source === 'connecting' ? '—' : tSpd(fastest);
   $('#statUpdated').textContent = state.lastUpdate ? new Date(state.lastUpdate).toISOString().slice(11, 19) : '—';
   $('#radarSource').textContent = state.source === 'demo' ? 'SIMULACIÓN' : state.source === 'live' ? 'EN VIVO' : 'CONECTANDO';
   $('#radarSource').style.color = state.source === 'demo' ? 'var(--gold)' : '';
@@ -1032,8 +1048,8 @@ function sparklineSVG(points) {
     </linearGradient></defs>
     <path d="${area}" fill="url(#sparkFill)"/>
     <path d="${line}" fill="none" stroke="#5eead4" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
-    <text x="${pad}" y="${pad + 7}" fill="#607890" font-size="7" font-family="JetBrains Mono, monospace">${fmtInt(max / 1000)}k ft</text>
-    <text x="${pad}" y="${h - pad}" fill="#607890" font-size="7" font-family="JetBrains Mono, monospace">${fmtInt(min / 1000)}k ft</text>
+    <text x="${pad}" y="${pad + 7}" fill="#607890" font-size="7" font-family="JetBrains Mono, monospace">${fmtInt((state.units==="imperial"?max/1000:max*0.3048))}k ${state.units==="imperial"?"ft":"m"}</text>
+    <text x="${pad}" y="${h - pad}" fill="#607890" font-size="7" font-family="JetBrains Mono, monospace">${fmtInt((state.units==="imperial"?min/1000:min*0.3048))}k ${state.units==="imperial"?"ft":"m"}</text>
   </svg>`;
 }
 
@@ -1067,6 +1083,18 @@ function fmtWind(kmh) {
   if (kmh === null || kmh === undefined) return '—';
   return state.units === 'imperial' ? `${fmtInt(kmh * 0.539957)} kt` : `${fmtInt(kmh)} km/h`;
 }
+
+/* Conversión de unidades según la preferencia del panel */
+const unitSet = () => (state.units === 'imperial'
+  ? { alt: 'ft', spd: 'kt', dist: 'NM', altK: 1, spdK: 1, distK: 1 / 1.852 }
+  : { alt: 'm', spd: 'km/h', dist: 'km', altK: 0.3048, spdK: 1.852, distK: 1 });
+const uAlt = (ft) => { const u = unitSet(); return `${fmtInt(ft * u.altK)}<small>${u.alt}</small>`; };
+const uSpd = (kt) => { const u = unitSet(); return `${fmtInt(kt * u.spdK)}<small>${u.spd}</small>`; };
+const uDist = (km) => { const u = unitSet(); return `${fmtInt(km * u.distK)}<small>${u.dist}</small>`; };
+const tAlt = (ft) => { const u = unitSet(); return `${fmtInt(ft * u.altK)} ${u.alt}`; };
+const tSpd = (kt) => { const u = unitSet(); return `${fmtInt(kt * u.spdK)} ${u.spd}`; };
+const tDist = (km) => { const u = unitSet(); return `${fmtInt(km * u.distK)} ${u.dist}`; };
+const tRate = (fpm) => (state.units === 'imperial' ? `${fmtInt(fpm)} ft/min` : `${fmt1(fpm * 0.00508)} m/s`);
 
 async function scheduleWeather() {
   clearTimeout(state.weatherTimer);
@@ -1201,10 +1229,10 @@ function updateSelectedLive() {
     const dist = haversine(state.center, p);
     const brg = bearing(state.center, p);
     board.innerHTML = `
-      <div class="metric"><span>ALTITUD</span><b>${fmtInt(p.alt)}<small>ft</small></b></div>
-      <div class="metric"><span>VELOCIDAD</span><b>${fmtInt(p.gs)}<small>kt</small></b></div>
+      <div class="metric"><span>ALTITUD</span><b>${uAlt(p.alt)}</b></div>
+      <div class="metric"><span>VELOCIDAD</span><b>${uSpd(p.gs)}</b></div>
       <div class="metric"><span>RUMBO</span><b>${fmtInt(p.track)}°<small>${compass(p.track)}</small></b></div>
-      <div class="metric"><span>DISTANCIA</span><b>${fmtInt(dist)}<small>km</small></b></div>`;
+      <div class="metric"><span>DISTANCIA</span><b>${uDist(dist)}</b></div>`;
   }
   const kv = $('#flightLiveKv');
   if (kv) {
@@ -1212,7 +1240,7 @@ function updateSelectedLive() {
       <div class="kv"><span>Matrícula</span><b>${esc(p.reg)}</b></div>
       <div class="kv"><span>Tipo</span><b>${esc(typeName(p.type))}</b></div>
       <div class="kv"><span>Squawk</span><b>${esc(p.squawk)}</b></div>
-      <div class="kv"><span>Régimen</span><b>${p.baroRate > 0 ? '+' : ''}${fmtInt(p.baroRate)} ft/min</b></div>
+      <div class="kv"><span>Régimen</span><b>${p.baroRate > 0 ? '+' : ''}${tRate(p.baroRate)}</b></div>
       <div class="kv"><span>Posición</span><b>${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}</b></div>
       <div class="kv"><span>Rumbo al centro</span><b>${fmtInt(brg)}° ${compass(brg)}</b></div>`;
   }
@@ -1354,7 +1382,7 @@ function feedRows() {
     const dist = distFromCenter(p);
     return `<button class="feed-row ${p.hex === state.selectedFlight ? 'is-selected' : ''}" data-hex="${esc(p.hex)}">
       <span class="fr-cs">${esc(p.flight)}</span>
-      <span class="fr-sub"><b>${esc(airlineFor(p.flight))}</b><span>${esc(typeName(p.type))} · ${fmtInt(p.alt)} ft · ${fmtInt(dist)} km</span></span>
+      <span class="fr-sub"><b>${esc(airlineFor(p.flight))}</b><span>${esc(typeName(p.type))} · ${tAlt(p.alt)} · ${tDist(dist)}</span></span>
       <span class="fr-alt">${fmtInt(p.alt / 1000)}k<small>${p.onGround ? 'tierra' : 'ft'}</small></span>
     </button>`;
   }).join('');
@@ -1409,10 +1437,10 @@ function flightPanel(p) {
         </div>
       </div>
       <div class="flight-metrics" id="flightLive">
-        <div class="metric"><span>ALTITUD</span><b>${fmtInt(p.alt)}<small>ft</small></b></div>
-        <div class="metric"><span>VELOCIDAD</span><b>${fmtInt(p.gs)}<small>kt</small></b></div>
+        <div class="metric"><span>ALTITUD</span><b>${uAlt(p.alt)}</b></div>
+        <div class="metric"><span>VELOCIDAD</span><b>${uSpd(p.gs)}</b></div>
         <div class="metric"><span>RUMBO</span><b>${fmtInt(p.track)}°<small>${compass(p.track)}</small></b></div>
-        <div class="metric"><span>DISTANCIA</span><b>${fmtInt(dist)}<small>km</small></b></div>
+        <div class="metric"><span>DISTANCIA</span><b>${uDist(dist)}</b></div>
       </div>
       <div class="panel-body">
         <div class="panel-section">
@@ -1421,7 +1449,7 @@ function flightPanel(p) {
             <div class="kv"><span>Matrícula</span><b>${esc(p.reg)}</b></div>
             <div class="kv"><span>Tipo</span><b>${esc(typeName(p.type))}</b></div>
             <div class="kv"><span>Squawk</span><b>${esc(p.squawk)}</b></div>
-            <div class="kv"><span>Régimen</span><b>${p.baroRate > 0 ? '+' : ''}${fmtInt(p.baroRate)} ft/min</b></div>
+            <div class="kv"><span>Régimen</span><b>${p.baroRate > 0 ? '+' : ''}${tRate(p.baroRate)}</b></div>
             <div class="kv"><span>Posición</span><b>${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}</b></div>
             <div class="kv"><span>Rumbo al centro</span><b>${fmtInt(brg)}° ${compass(brg)}</b></div>
           </div>
@@ -1442,6 +1470,7 @@ function flightPanel(p) {
         <div class="actionrow">
           <button class="widebtn ${state.follow ? 'is-active' : ''}" id="followBtn" data-action="follow"><svg class="i"><use href="#i-follow"></use></svg><span>${state.follow ? 'Siguiendo' : 'Seguir'}</span></button>
           <button class="widebtn ghost" data-action="center-flight" title="Centrar"><svg class="i"><use href="#i-locate"></use></svg></button>
+          <button class="widebtn ghost" data-action="copy-link" title="Copiar enlace a esta ficha"><svg class="i"><use href="#i-external"></use></svg></button>
           <a class="iconlink" href="https://www.flightradar24.com/${encodeURIComponent(p.flight)}" target="_blank" rel="noopener" title="Ver en Flightradar24"><svg class="i"><use href="#i-external"></use></svg></a>
           <a class="iconlink" href="https://globe.adsbexchange.com/?icao=${encodeURIComponent(p.hex)}" target="_blank" rel="noopener" title="Ver en ADS-B Exchange"><svg class="i"><use href="#i-radar"></use></svg></a>
         </div>
@@ -1500,7 +1529,7 @@ function routePanel(route) {
         <div class="route-cities"><span>${esc(route.from.city)}, ${esc(route.from.country)} → ${esc(route.to.city)}, ${esc(route.to.country)}</span></div>
       </div>
       <div class="route-stats">
-        <div class="metric"><span>DISTANCIA</span><b>${fmtInt(route.distKm)}<small>km</small></b></div>
+        <div class="metric"><span>DISTANCIA</span><b>${uDist(route.distKm)}</b></div>
         <div class="metric"><span>DURACIÓN EST.</span><b>${Math.floor(minutes / 60)}h ${minutes % 60}m</b></div>
         <div class="metric"><span>EN RUTA</span><b>${live.count}<small>vuelos</small></b></div>
       </div>
@@ -1511,7 +1540,7 @@ function routePanel(route) {
         </div>
         <div class="panel-section">
           <div class="panel-section-title"><span>VUELOS DETECTADOS EN LA RUTA</span><b>${live.count}</b></div>
-          ${live.sample.length ? live.sample.map((p) => `<button class="feed-row" data-hex="${esc(p.hex)}"><span class="fr-cs">${esc(p.flight)}</span><span class="fr-sub"><b>${esc(airlineFor(p.flight))}</b><span>${esc(typeName(p.type))} · ${fmtInt(p.alt)} ft</span></span><span class="fr-alt">${fmtInt(p.gs)}<small>kt</small></span></button>`).join('') : '<div class="feed-empty">Ningún avión coincide ahora con el corredor de esta ruta. La detección compara posición y rumbo con el arco de gran círculo.</div>'}
+          ${live.sample.length ? live.sample.map((p) => `<button class="feed-row" data-hex="${esc(p.hex)}"><span class="fr-cs">${esc(p.flight)}</span><span class="fr-sub"><b>${esc(airlineFor(p.flight))}</b><span>${esc(typeName(p.type))} · ${tAlt(p.alt)}</span></span><span class="fr-alt">${uSpd(p.gs)}</span></button>`).join('') : '<div class="feed-empty">Ningún avión coincide ahora con el corredor de esta ruta. La detección compara posición y rumbo con el arco de gran círculo.</div>'}
         </div>
         <div class="panel-section">
           <p class="tiny">La ruta se dibuja como arco de gran círculo. La lista de vuelos no usa planes de vuelo: cruza posiciones ADS-B en vivo con el corredor y filtra por rumbo.</p>
@@ -1563,7 +1592,7 @@ function airportsPanel() {
   hubs.sort((a, b) => (state.airportCounts.get(b.h.iata) || 0) - (state.airportCounts.get(a.h.iata) || 0));
   return `
     <div class="panel-head">
-      <div><span class="eyebrow">AEROPUERTOS</span><h2>Panel de aeropuertos</h2><p>${QUICK_HUBS.length} hubs principales · tráfico en 80 km</p></div>
+      <div><span class="eyebrow">AEROPUERTOS</span><h2>Panel de aeropuertos</h2><p>${QUICK_HUBS.length} hubs principales · tráfico en ${tDist(80)}</p></div>
       <button class="panel-close" data-action="panel-close" aria-label="Cerrar"><svg class="i"><use href="#i-close"></use></svg></button>
     </div>
     <div class="route-search"><input id="airportFilter" placeholder="Buscar aeropuerto, ciudad o país…" value="${esc(state.airportFilter)}"></div>
@@ -1628,7 +1657,7 @@ function airportPanel(ap) {
             <div class="overview-item"><span>En salida</span><b>${departures.length}</b></div>
             <div class="overview-item"><span>Sobrevolando</span><b>${over.length}</b></div>
           </div>
-          ${over.slice(0, 5).map(({ p, dist }) => `<button class="feed-row" data-hex="${esc(p.hex)}"><span class="fr-cs">${esc(p.flight)}</span><span class="fr-sub"><b>${esc(airlineFor(p.flight))}</b><span>${esc(typeName(p.type))} · ${fmtInt(dist)} km</span></span><span class="fr-alt">${fmtInt(p.alt / 1000)}k<small>ft</small></span></button>`).join('')}
+          ${over.slice(0, 5).map(({ p, dist }) => `<button class="feed-row" data-hex="${esc(p.hex)}"><span class="fr-cs">${esc(p.flight)}</span><span class="fr-sub"><b>${esc(airlineFor(p.flight))}</b><span>${esc(typeName(p.type))} · ${tDist(dist)}</span></span><span class="fr-alt">${uAlt(p.alt)}</span></button>`).join('')}
         </div>
         <div class="actionrow" style="padding:10px 15px 14px">
           <button class="widebtn" data-action="center-airport"><svg class="i"><use href="#i-locate"></use></svg><span>Centrar</span></button>
@@ -1643,7 +1672,7 @@ function boardRows(list) {
   return list.slice(0, 8).map(({ p, dist }) => {
     const eta = p.gs > 80 ? Math.max(1, Math.round((dist / (p.gs * 1.852)) * 60)) : null;
     return `<button class="board-row" data-hex="${esc(p.hex)}" style="border:0;background:transparent;text-align:left;width:100%">
-      <b>${esc(p.flight)}</b><span>${fmtInt(dist)} km${eta ? ` · ${eta} min` : ''}</span>
+      <b>${esc(p.flight)}</b><span>${tDist(dist)}${eta ? ` · ${eta} min` : ''}</span>
     </button>`;
   }).join('');
 }
@@ -1862,7 +1891,7 @@ function renderSearchResults() {
     html += '<div class="search-group">Vuelos y aeronaves</div>';
     html += flights.map((i) => `<button class="search-item" data-search-index="${state.searchItems.indexOf(i)}">
       <svg class="i" style="color:var(--teal);width:15px;height:15px"><use href="#i-plane"></use></svg>
-      <span class="si-main"><span class="si-title">${esc(i.p.flight)} · ${esc(i.p.reg)}</span><span class="si-sub">${esc(airlineFor(i.p.flight))} · ${esc(typeName(i.p.type))} · ${fmtInt(i.p.alt)} ft</span></span>
+      <span class="si-main"><span class="si-title">${esc(i.p.flight)} · ${esc(i.p.reg)}</span><span class="si-sub">${esc(airlineFor(i.p.flight))} · ${esc(typeName(i.p.type))} · ${tAlt(i.p.alt)}</span></span>
       <span class="si-badge">SEGUIR</span>
     </button>`).join('');
   }
@@ -2200,6 +2229,12 @@ function bindEvents() {
       } else if (a === 'center-flight') {
         const p = state.planes.find((x) => x.hex === state.selectedFlight);
         if (p && state.map) state.map.flyTo([p.lat, p.lon], Math.max(state.map.getZoom(), 9), { duration: 1 });
+      } else if (a === 'copy-link') {
+        const url = location.href.split('#')[0] + (location.hash || '');
+        const done = () => toast('Enlace copiado', 'Comparte la ficha de este vuelo.', 'info');
+        const fail = () => toast('No se pudo copiar', 'Copia la URL de la barra de direcciones.', 'warn');
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done).catch(fail);
+        else fail();
       } else if (a === 'retry') {
         state.hasLoadedOnce = false;
         refreshTraffic();
@@ -2325,6 +2360,7 @@ function applySettings() {
   savePrefs();
   closeSettings();
   scheduleRefresh(700);
+  renderLegend();
   renderPanel(true);
   renderPlanes();
 }
@@ -2363,6 +2399,7 @@ function init() {
   setActiveNav('radar');
   document.body.classList.toggle('hide-labels', !state.showLabels);
   updateStats();
+  renderLegend();
   renderPanel(true);
   setStatus('CONECTANDO');
   api.health().then((h) => {
