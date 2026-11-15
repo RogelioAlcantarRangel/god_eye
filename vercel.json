@@ -1,0 +1,11 @@
+{
+  "builds": [
+    { "src": "server.mjs", "use": "@vercel/node" },
+    { "src": "{index.html,assets/**,vendor/**}", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/server.mjs" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
