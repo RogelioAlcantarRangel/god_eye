@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#05080f">
+  <meta name="description" content="Ojo de Dios: radar de aviación en vivo, cámaras en directo, rutas, aeropuertos y estado del cielo en un solo panel.">
+  <title>Ojo de Dios · El cielo en vivo</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2305080f'/%3E%3Cpath d='M6 32c8-11 17-17 26-17s18 6 26 17c-8 11-17 17-26 17S14 43 6 32z' fill='none' stroke='%235eead4' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='8' fill='%23f5c451'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%2305080f'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.2 12S5.8 5.5 12 5.5 21.8 12 21.8 12 18.2 18.5 12 18.5 2.2 12 2.2 12Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></symbol>
+  <symbol id="i-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4.8" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".65"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><path d="M12 12 19 7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><rect x="3" y="6" width="12.5" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m15.5 11 4.2-2.6c.5-.3 1.3.1 1.3.8v5.6c0 .7-.8 1.1-1.3.8L15.5 13Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="i-route" viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="18.5" cy="5.5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.4 16.6C10.8 13 8.8 9.2 12 7.2c1.7-1.1 3.3-1.3 4.8-1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 3" stroke-linecap="round"/></symbol>
+  <symbol id="i-plane" viewBox="0 0 24 24"><path d="M12 2.2c.8 0 1.2.6 1.3 1.5l.4 4.9 7.4 4.3v2.2l-7.2-2.1.3 5 2.4 1.8v1.6L12 20.6l-4.6.8v-1.6l2.4-1.8.3-5L2.9 15v-2.2l7.4-4.3.4-4.9c.1-.9.5-1.5 1.3-1.5Z" fill="currentColor"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m15.2 15.2 4.6 4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" opacity=".7"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5-10-6.5Z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></symbol>
+  <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></symbol>
+  <symbol id="i-follow" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-satellite" viewBox="0 0 24 24"><path d="m9 6 3-3 9 9-3 3-9-9Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m6.5 8.5 3 3M3 21l6-6M12.5 3.5l8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="3.2" y="15.2" width="5.6" height="5.6" rx="1" transform="rotate(-45 6 18)" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18h10.2a3.8 3.8 0 0 0 .4-7.6A5.6 5.6 0 0 0 6.8 9.4 4.3 4.3 0 0 0 7 18Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="i-wind" viewBox="0 0 24 24"><path d="M3 8h10.5a2.5 2.5 0 1 0-2.5-2.5M3 12h15.5a2.5 2.5 0 1 1-2.5 2.5M3 16h8a2.2 2.2 0 1 1-2.2 2.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.1 8.2A7.5 7.5 0 0 1 19.5 12M4.5 12A7.5 7.5 0 0 0 17.9 15.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 9h17M3.5 15h17M12 3c-5 4.5-5 13.5 0 18M12 3c5 4.5 5 13.5 0 18" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".8"/></symbol>
+</svg>
+
+<div id="app" class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-eye"><svg class="i"><use href="#i-eye"></use></svg><span class="brand-eye-core"></span></div>
+      <div class="brand-copy">
+        <span class="brand-kicker">SISTEMA DE VIGILANCIA AÉREA</span>
+        <span class="brand-title">OJO DE DIOS</span>
+      </div>
+    </div>
+
+    <nav class="mainnav" aria-label="Secciones">
+      <button class="navbtn is-active" data-view="radar"><svg class="i"><use href="#i-radar"></use></svg><span>Radar</span></button>
+      <button class="navbtn" data-view="cams"><svg class="i"><use href="#i-cam"></use></svg><span>Cámaras</span></button>
+      <button class="navbtn" data-view="routes"><svg class="i"><use href="#i-route"></use></svg><span>Rutas</span></button>
+      <button class="navbtn" data-view="airports"><svg class="i"><use href="#i-plane"></use></svg><span>Aeropuertos</span></button>
+    </nav>
+
+    <div class="searchwrap" id="searchWrap">
+      <svg class="i searchicon"><use href="#i-search"></use></svg>
+      <input id="globalSearch" type="search" placeholder="Vuelo, matrícula, aeropuerto o ciudad…" autocomplete="off" spellcheck="false" aria-label="Buscar">
+      <kbd class="searchkbd">/</kbd>
+      <div class="search-results" id="searchResults" hidden></div>
+    </div>
+
+    <div class="topmeta">
+      <div class="clockblock">
+        <span class="clock" id="utcClock">--:--:--</span>
+        <span class="clocklabel">UTC</span>
+      </div>
+      <div class="statuspill" id="statusPill"><i></i><span>CONECTANDO</span></div>
+      <button class="iconbtn rail-toggle" id="railToggle" aria-label="Filtros y capas"><svg class="i"><use href="#i-layers"></use></svg></button>
+      <button class="iconbtn" id="settingsBtn" aria-label="Ajustes"><svg class="i"><use href="#i-settings"></use></svg></button>
+    </div>
+  </header>
+
+  <nav class="mobilenav" aria-label="Secciones">
+    <button data-view="radar"><svg class="i"><use href="#i-radar"></use></svg><span>Radar</span></button>
+    <button data-view="cams"><svg class="i"><use href="#i-cam"></use></svg><span>Cámaras</span></button>
+    <button data-view="routes"><svg class="i"><use href="#i-route"></use></svg><span>Rutas</span></button>
+    <button data-view="airports"><svg class="i"><use href="#i-plane"></use></svg><span>Aeropuertos</span></button>
+  </nav>
+
+  <aside class="rail" id="rail">
+    <div class="rail-head">
+      <span class="eyebrow">CONTROL</span>
+      <button class="iconbtn rail-close" id="railClose" aria-label="Cerrar panel"><svg class="i"><use href="#i-close"></use></svg></button>
+    </div>
+
+    <div class="rail-section">
+      <div class="rail-label"><span>Capa base</span></div>
+      <div class="layergrid" id="layerGrid">
+        <button class="layerchip is-active" data-basemap="dark"><span class="swatch sw-dark"></span>Noche</button>
+        <button class="layerchip" data-basemap="satellite"><span class="swatch sw-sat"></span>Satélite</button>
+        <button class="layerchip" data-basemap="light"><span class="swatch sw-light"></span>Mapa</button>
+        <button class="layerchip" data-basemap="terrain"><span class="swatch sw-terrain"></span>Terreno</button>
+      </div>
+    </div>
+
+    <div class="rail-section">
+      <div class="rail-label"><span>Radar</span><span class="rail-badge" id="radiusBadge">250 NM</span></div>
+      <label class="range-label" for="radiusRange">Radio de consulta <output id="radiusOut">250 NM</output></label>
+      <input id="radiusRange" class="range" type="range" min="25" max="250" step="25" value="250">
+      <label class="switchrow"><input type="checkbox" id="toggleGround"><span class="switch"></span><span>Mostrar en tierra</span></label>
+      <label class="switchrow"><input type="checkbox" id="toggleTrails" checked><span class="switch"></span><span>Estelas</span></label>
+      <label class="switchrow"><input type="checkbox" id="toggleLabels" checked><span class="switch"></span><span>Etiquetas</span></label>
+      <label class="switchrow"><input type="checkbox" id="toggleAirports" checked><span class="switch"></span><span>Aeropuertos</span></label>
+      <div class="range-label alt-label">Techo de altitud <output id="altOut">0 – 50.000 ft</output></div>
+      <input id="altMin" class="range range-dual" type="range" min="0" max="50000" step="1000" value="0">
+      <input id="altMax" class="range range-dual" type="range" min="0" max="50000" step="1000" value="50000">
+    </div>
+
+    <div class="rail-section">
+      <div class="rail-label"><span>Actualización</span></div>
+      <div class="segmented" id="refreshSeg">
+        <button data-refresh="5000">5 s</button>
+        <button data-refresh="10000" class="is-active">10 s</button>
+        <button data-refresh="20000">20 s</button>
+        <button data-refresh="30000">30 s</button>
+      </div>
+      <button class="widebtn" id="pauseBtn"><svg class="i"><use href="#i-pause"></use></svg><span>Pausar radar</span></button>
+    </div>
+
+    <div class="rail-section" id="hubSection">
+      <div class="rail-label"><span>Saltos rápidos</span></div>
+      <div class="hubgrid" id="hubGrid"></div>
+    </div>
+    <div class="rail-section rail-legend">
+      <div class="rail-label"><span>Techo de vuelo</span></div>
+      <div class="legend"><i style="--c:#64748b"></i><span>0 ft</span></div>
+      <div class="legend"><i style="--c:#38bdf8"></i><span>10.000</span></div>
+      <div class="legend"><i style="--c:#34d399"></i><span>20.000</span></div>
+      <div class="legend"><i style="--c:#fbbf24"></i><span>33.000</span></div>
+      <div class="legend"><i style="--c:#fb923c"></i><span>40.000</span></div>
+      <div class="legend"><i style="--c:#c084fc"></i><span>+</span></div>
+    </div>
+
+    <div class="rail-foot">
+      <button class="widebtn ghost" id="locateBtn"><svg class="i"><use href="#i-locate"></use></svg><span>Mi ubicación</span></button>
+      <div class="rail-note">Datos ADS-B de adsb.lol (ODbL) · Mapas CARTO / Esri · Cámaras vía YouTube Live</div>
+    </div>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div id="map" class="map"></div>
+    <div class="map-fx" aria-hidden="true"><div class="scanlines"></div><div class="vignette"></div><div class="gridlines"></div></div>
+    <div class="reticle" aria-hidden="true"><span></span><span></span><span></span><span></span><i></i></div>
+    <div class="radar-sweep" aria-hidden="true"></div>
+
+    <div class="hud hud-tl">
+      <div class="hud-kicker"><span class="live-dot"></span> RADAR <b id="radarSource">EN VIVO</b></div>
+      <div class="hud-main" id="centerLabel">40.42° N · 3.70° O</div>
+      <div class="hud-sub">Radio <b id="radiusLabel">250 NM</b> · <span id="coverageLabel">cobertura local</span></div>
+    </div>
+
+    <div class="hud hud-tr">
+      <div class="stat"><span>EN VUELO</span><b id="statAirborne">—</b></div>
+      <div class="stat"><span>EN TIERRA</span><b id="statGround">—</b></div>
+      <div class="stat"><span>TECHO MÁX</span><b id="statCeiling">—</b></div>
+      <div class="stat"><span>MÁS RÁPIDO</span><b id="statFastest">—</b></div>
+      <div class="stat stat-updated"><span>ACTUALIZADO</span><b id="statUpdated">—</b></div>
+    </div>
+
+    <div class="hud hud-bl">
+      <button class="weatherchip" id="weatherChip" title="Ver el tiempo">
+        <svg class="i"><use href="#i-sun"></use></svg>
+        <span><b id="weatherTemp">—</b><small id="weatherDesc">cargando cielo</small></span>
+      </button>
+      <button class="weatherchip" id="issChip" title="Posición de la ISS">
+        <svg class="i"><use href="#i-satellite"></use></svg>
+        <span><b>ISS</b><small id="issLabel">—</small></span>
+      </button>
+    </div>
+
+    <div class="hud hud-br">
+      <button class="mapbtn" id="zoomIn" aria-label="Acercar">+</button>
+      <button class="mapbtn" id="zoomOut" aria-label="Alejar">−</button>
+      <button class="mapbtn" id="resetView" aria-label="Restablecer vista"><svg class="i"><use href="#i-locate"></use></svg></button>
+      <div class="mapbtnsplit"></div>
+      <button class="mapbtn" id="toggleCamsMini" aria-label="Cámaras"><svg class="i"><use href="#i-cam"></use></svg></button>
+      <button class="mapbtn" id="toggleSettings" aria-label="Ajustes"><svg class="i"><use href="#i-layers"></use></svg></button>
+    </div>
+
+    <div class="map-hint" id="mapHint">
+      <span class="hint-eyebrow">OJO DE DIOS</span>
+      <p>El cielo, en vivo. Haz clic en un avión para abrir su ficha, busca un vuelo o salta a un aeropuerto.</p>
+      <button id="hintClose">Entendido</button>
+    </div>
+
+    <div class="bottomdock" id="bottomDock">
+      <div class="dock-head">
+        <div><span class="eyebrow">CÁMARAS EN DIRECTO</span><b>El mundo, ahora</b></div>
+        <button class="textbtn" id="openCams">Ver todas <svg class="i"><use href="#i-chevron"></use></svg></button>
+      </div>
+      <div class="dock-strip" id="dockStrip"></div>
+    </div>
+
+    <aside class="rightpanel" id="rightPanel" aria-live="polite"></aside>
+  </main>
+
+  <section class="camsview" id="camsView" hidden>
+    <div class="cams-top">
+      <div>
+        <span class="eyebrow">CÁMARAS EN DIRECTO</span>
+        <h1>El mundo, ahora</h1>
+        <p>Emisiones en vivo de ciudades y aeropuertos. Sin registro, sin intermediarios.</p>
+      </div>
+      <div class="cams-actions">
+        <div class="cams-search">
+          <svg class="i"><use href="#i-search"></use></svg>
+          <input id="camSearch" placeholder="Busca una ciudad, país o aeropuerto…" autocomplete="off">
+          <button id="camSearchBtn">Buscar</button>
+        </div>
+        <button class="iconbtn" id="closeCams" aria-label="Volver al radar"><svg class="i"><use href="#i-close"></use></svg></button>
+      </div>
+    </div>
+    <div class="cam-filters" id="camFilters">
+      <button class="filterchip is-active" data-camfilter="all">Todas</button>
+      <button class="filterchip" data-camfilter="airport">Aeropuertos</button>
+      <button class="filterchip" data-camfilter="city">Ciudades</button>
+      <button class="filterchip" data-camfilter="space">Espacio</button>
+      <span class="cam-count" id="camCount">—</span>
+    </div>
+    <div class="cams-layout">
+      <div class="cam-feature">
+        <div class="cam-player" id="camPlayer"></div>
+        <div class="cam-feature-meta">
+          <div><span class="eyebrow" id="camMetaKicker">EN DIRECTO</span><h2 id="camTitle">—</h2><p id="camMeta">—</p></div>
+          <div class="cam-feature-actions">
+            <button class="widebtn ghost" id="camPrev">Anterior</button>
+            <button class="widebtn" id="camNext">Siguiente</button>
+          </div>
+        </div>
+      </div>
+      <div class="cam-list" id="camList"></div>
+    </div>
+  </section>
+
+  <div class="modal" id="settingsModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head"><div><span class="eyebrow">AJUSTES</span><h2>Panel de control</h2></div><button class="iconbtn" id="closeSettings" aria-label="Cerrar"><svg class="i"><use href="#i-close"></use></svg></button></div>
+      <div class="settings-grid">
+        <label class="setting"><span>Actualización del radar</span><select id="setRefresh"><option value="5000">5 segundos</option><option value="10000">10 segundos</option><option value="20000">20 segundos</option><option value="30000">30 segundos</option></select></label>
+        <label class="setting"><span>Radio de consulta</span><select id="setRadius"><option value="50">50 NM</option><option value="100">100 NM</option><option value="150">150 NM</option><option value="200">200 NM</option><option value="250">250 NM</option></select></label>
+        <label class="setting"><span>Unidades</span><select id="setUnits"><option value="imperial">Pies / nudos</option><option value="metric">Metros / km/h</option></select></label>
+        <label class="setting"><span>Etiquetas en el mapa</span><select id="setLabels"><option value="on">Sí</option><option value="off">No</option></select></label>
+      </div>
+      <div class="settings-note">Los datos de aviación provienen de la red abierta ADS-B de <b>adsb.lol</b>. Las cámaras se emiten a través de YouTube Live. Este panel es una demostración independiente y no está asociado a ningún proveedor de datos.</div>
+      <div class="modal-foot"><button class="widebtn" id="settingsDone">Aplicar</button></div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="assertive"></div>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script type="module" src="assets/app.js"></script>
+</body>
+</html>
